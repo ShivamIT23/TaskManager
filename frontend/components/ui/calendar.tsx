@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { DayPicker } from "react-day-picker"
+import * as React from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { DayPicker } from "react-day-picker";
 
-import { cn } from "@taskShivManager/lib/utils"
-import { buttonVariants } from "@taskShivManager/components/ui/button"
+import { cn } from "@taskShivManager/lib/utils";
+import { buttonVariants } from "@taskShivManager/components/ui/button";
 
 function Calendar({
   className,
@@ -30,10 +30,10 @@ function Calendar({
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
         table: "w-full border-collapse space-x-1",
-        head_row: "flex",
+        head_row: "grid grid-cols-7",
         head_cell:
-          "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
-        row: "flex w-full mt-2",
+          "text-muted-foreground text-center font-normal text-[0.8rem]",
+        row: "grid grid-cols-7",
         cell: cn(
           "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-range-end)]:rounded-r-md",
           props.mode === "range"
@@ -69,7 +69,7 @@ function Calendar({
       }}
       {...props}
     />
-  )
+  );
 }
 
-export { Calendar }
+export { Calendar };

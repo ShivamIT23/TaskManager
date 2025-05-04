@@ -30,14 +30,14 @@ import {
 import Link from "next/link";
 
 export interface Task {
-  id: string;
+  _id: string;
   title: string;
   description: string;
   priority: "high" | "medium" | "low";
   status: "pending" | "in-progress" | "completed";
   assignedTo: string;
   createdBy: string;
-  dueDate: Date;
+  dueDate: string;
 }
 
 interface TaskCardProps {
@@ -45,6 +45,7 @@ interface TaskCardProps {
   onStatusChange?: (id: string, status: string) => void;
   onDelete?: (id: string) => void;
   showEditButton?: boolean;
+  showAssign?: boolean;
 }
 
 export function TaskCard({
@@ -52,6 +53,7 @@ export function TaskCard({
   onStatusChange,
   onDelete,
   showEditButton,
+  showAssign = false,
 }: TaskCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -83,7 +85,7 @@ export function TaskCard({
       whileHover={{ scale: 1.02 }}
       className="w-full h-full py-[2vh]"
     >
-      <Card className="w-full h-full">
+      <Card className="w-full h-full flex flex-col justify-evenly">
         <CardHeader className="p-4 pb-0">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
@@ -120,7 +122,7 @@ export function TaskCard({
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => onDelete && onDelete(task.id)}
+                  onClick={() => onDelete && onDelete(task._id)}
                   className="text-red-600 bg-white"
                 >
                   <Trash className="mr-2 h-4 w-4" />
@@ -150,9 +152,15 @@ export function TaskCard({
               </Button>
             )}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 text-xs text-muted-foreground">
+              {showAssign && (
+                <div>
+                  <span className="font-medium">Assigned to: </span>
+                  {task.assignedTo}
+                </div>
+              )}
               <div>
                 <span className="font-medium">Due:</span>{" "}
-                {format(task.dueDate, "MMM d, yyyy")}
+                {format(new Date(task.dueDate), "MMM d, yyyy")}
               </div>
             </div>
           </div>
@@ -169,7 +177,7 @@ export function TaskCard({
                 onClick={() =>
                   onStatusChange &&
                   onStatusChange(
-                    task.id,
+                    task._id,
                     task.status === "pending" ? "in-progress" : "completed"
                   )
                 }
@@ -178,7 +186,7 @@ export function TaskCard({
               </Button>
             )}
             {showEditButton && (
-              <Link href={`/edit-task/${task.id}`}>
+              <Link href={`/edit-task/${task._id}`}>
                 <Button size="sm" variant="outline">
                   <Edit className="mr-2 h-4 w-4" />
                   Edit

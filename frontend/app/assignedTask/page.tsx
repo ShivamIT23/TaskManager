@@ -3,10 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@taskShivManager/components/DashBoard/NavBar";
-import {
-  TaskCard,
-  type Task,
-} from "@taskShivManager/components/DashBoard/Task_Card";
+import { TaskCard } from "@taskShivManager/components/DashBoard/Task_Card";
 import { Button } from "@taskShivManager/components/ui/button";
 import { Input } from "@taskShivManager/components/ui/input";
 import {
@@ -18,87 +15,50 @@ import {
 } from "@taskShivManager/components/ui/select";
 import { Plus, Search, Filter } from "lucide-react";
 import Link from "next/link";
+import { useTaskStore } from "@taskShivManager/store/taskStore";
+import { useUserList } from "@taskShivManager/store/userList";
+import { fetchAssignedTasks } from "@taskShivManager/lib/fetchTasks";
 
-// Mock data for assigned tasks (tasks created by the current user)
-const mockAssignedTasks: Task[] = [
-  {
-    id: "6",
-    title: "Create marketing materials",
-    description:
-      "Design and create marketing materials for the new product launch including brochures, social media graphics, and email templates.",
-    priority: "high",
-    status: "in-progress",
-    assignedTo: "Emily Davis",
-    createdBy: "John Doe",
-    dueDate: new Date(2025, 4, 18),
-  },
-  {
-    id: "7",
-    title: "Conduct user research",
-    description:
-      "Interview 5-10 users to gather feedback on the new feature prototype and compile findings into a report.",
-    priority: "medium",
-    status: "pending",
-    assignedTo: "Sarah Johnson",
-    createdBy: "John Doe",
-    dueDate: new Date(2025, 4, 22),
-  },
-  {
-    id: "8",
-    title: "Optimize database queries",
-    description:
-      "Review and optimize the current database queries to improve application performance. Focus on the most resource-intensive operations.",
-    priority: "medium",
-    status: "pending",
-    assignedTo: "Michael Brown",
-    createdBy: "John Doe",
-    dueDate: new Date(2025, 4, 25),
-  },
-  {
-    id: "9",
-    title: "Set up analytics dashboard",
-    description:
-      "Configure and set up an analytics dashboard to track key performance metrics for the application.",
-    priority: "low",
-    status: "completed",
-    assignedTo: "Alex Wilson",
-    createdBy: "John Doe",
-    dueDate: new Date(2025, 4, 12),
-  },
-  {
-    id: "10",
-    title: "Write API documentation",
-    description:
-      "Create comprehensive documentation for the new API endpoints including request/response formats, authentication requirements, and example usage.",
-    priority: "high",
-    status: "pending",
-    assignedTo: "Robert Johnson",
-    createdBy: "John Doe",
-    dueDate: new Date(2025, 4, 30),
-  },
-];
-
-// Mock team members for the assignee filter
-const teamMembers = [
-  { id: "all", name: "All Team Members" },
-  { id: "emily-davis", name: "Emily Davis" },
-  { id: "sarah-johnson", name: "Sarah Johnson" },
-  { id: "michael-brown", name: "Michael Brown" },
-  { id: "alex-wilson", name: "Alex Wilson" },
-  { id: "robert-johnson", name: "Robert Johnson" },
-];
+// Interface tasks (tasks given to the current user)
+interface Task {
+  _id: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  priority: "high" | "medium" | "low";
+  status: "pending" | "in-progress" | "completed";
+  createdBy: string;
+  assignedTo: string;
+  pendingAction?: {
+    action: "update" | "delete" | null;
+    requestedBy?: string;
+    updateData?: object;
+    approved?: boolean;
+  };
+}
 
 export default function AssignedTasksPage() {
-  const [tasks, setTasks] = useState<Task[]>(mockAssignedTasks);
-  const [filteredTasks, setFilteredTasks] = useState<Task[]>(mockAssignedTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [assigneeFilter, setAssigneeFilter] = useState("all");
+  const { assignedTask } = useTaskStore();
+  const { users, fetchUsers } = useUserList();
+
+  useEffect(() => {
+    setTasks(assignedTask);
+  }, [assignedTask]);
 
   const handlePriorityFilterChange = (priority: string) => {
     setPriorityFilter(priority);
     filterTasks(priority, assigneeFilter, searchQuery);
   };
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) fetchUsers(token);
+  }, []);
 
   const handleAssigneeFilterChange = (assignee: string) => {
     setAssigneeFilter(assignee);
@@ -111,7 +71,7 @@ export default function AssignedTasksPage() {
   };
 
   const filterTasks = (priority: string, assignee: string, query: string) => {
-    let filtered = [...tasks];
+    let filtered = tasks ? [...tasks] : [];
 
     // Filter by priority
     if (priority !== "all") {
@@ -135,12 +95,19 @@ export default function AssignedTasksPage() {
       );
     }
 
+    // Sort tasks so completed tasks appear at the end
+    filtered.sort((a, b) => {
+      if (a.status === "completed" && b.status !== "completed") return 1;
+      if (a.status !== "completed" && b.status === "completed") return -1;
+      return 0;
+    });
+
     setFilteredTasks(filtered);
   };
 
   const handleStatusChange = (id: string, status: string) => {
     const updatedTasks = tasks.map((task) =>
-      task.id === id
+      task._id === id
         ? { ...task, status: status as "pending" | "in-progress" | "completed" }
         : task
     );
@@ -149,10 +116,31 @@ export default function AssignedTasksPage() {
   };
 
   const handleDeleteTask = (id: string) => {
-    const updatedTasks = tasks.filter((task) => task.id !== id);
+    const updatedTasks = tasks.filter((task) => task._id !== id);
     setTasks(updatedTasks);
     filterTasks(priorityFilter, assigneeFilter, searchQuery);
   };
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      const fetchTasks = async () => {
+        try {
+          const res = await fetchAssignedTasks(token);
+          if (Array.isArray(res)) {
+            setTasks(res as Task[]);
+          } else {
+            console.log(res);
+          }
+        } catch (error) {
+          console.error("Error fetching tasks:", error);
+          setTasks([]);
+        }
+      };
+      fetchTasks();
+    }
+  }, []);
 
   useEffect(() => {
     filterTasks(priorityFilter, assigneeFilter, searchQuery);
@@ -162,7 +150,7 @@ export default function AssignedTasksPage() {
     <div className="flex min-h-screen flex-col">
       <Navbar onFilterChange={handlePriorityFilterChange} />
       <main className="flex-1">
-        <div className="container py-6">
+        <div className="container py-6 mx-auto">
           <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <motion.h1
               className="text-2xl font-bold tracking-tight"
@@ -215,13 +203,15 @@ export default function AssignedTasksPage() {
                 <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue placeholder="Select team member" />
                 </SelectTrigger>
-                <SelectContent>
-                  {teamMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                {users.length > 0 && (
+                  <SelectContent className="bg-white">
+                    {users.map((member) => (
+                      <SelectItem key={member._id} value={member._id}>
+                        {member.username}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                )}
               </Select>
             </div>
           </motion.div>
@@ -229,18 +219,20 @@ export default function AssignedTasksPage() {
           <AnimatePresence>
             {filteredTasks.length > 0 ? (
               <motion.div
-                className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                key={23}
+                className="grid gap-4 h-fit w-full sm:grid-cols-2 lg:grid-cols-3"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ staggerChildren: 0.1 }}
               >
                 {filteredTasks.map((task) => (
                   <TaskCard
-                    key={task.id}
+                    key={task._id}
                     task={task}
                     onStatusChange={handleStatusChange}
                     onDelete={handleDeleteTask}
                     showEditButton={true}
+                    showAssign={true}
                   />
                 ))}
               </motion.div>
@@ -258,7 +250,7 @@ export default function AssignedTasksPage() {
                     ? "No tasks match your filter criteria. Try different filters."
                     : "You haven't assigned any tasks yet. Create your first task to get started."}
                 </p>
-                <Link href="/create-task">
+                <Link href="/createTask">
                   <Button>
                     <Plus className="mr-2 h-4 w-4" />
                     Create Task

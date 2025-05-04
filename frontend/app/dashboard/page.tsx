@@ -1,92 +1,63 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import Navbar from "@taskShivManager/components/DashBoard/NavBar"
-import { TaskCard, type Task } from "@taskShivManager/components/DashBoard/Task_Card"
-import { Button } from "@taskShivManager/components/ui/button"
-import { Input } from "@taskShivManager/components/ui/input"
-import { Plus, Search } from "lucide-react"
-import Link from "next/link"
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import Navbar from "@taskShivManager/components/DashBoard/NavBar";
+import { TaskCard } from "@taskShivManager/components/DashBoard/Task_Card";
+import { Button } from "@taskShivManager/components/ui/button";
+import { Input } from "@taskShivManager/components/ui/input";
+import { Plus, Search } from "lucide-react";
+import Link from "next/link";
+import { useTaskStore } from "@taskShivManager/store/taskStore";
+import { fetchGivenTasks } from "@taskShivManager/lib/fetchTasks";
+
+interface Task {
+  _id: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  priority: "high" | "medium" | "low";
+  status: "pending" | "in-progress" | "completed";
+  createdBy: string;
+  assignedTo: string;
+  pendingAction?: {
+    action: "update" | "delete" | null;
+    requestedBy?: string;
+    updateData?: object;
+    approved?: boolean;
+  };
+}
 
 // Mock data for tasks
-const mockTasks: Task[] = [
-  {
-    id: "1",
-    title: "Complete project proposal",
-    description:
-      "Write a detailed project proposal for the new client including timeline, budget, and resource allocation. Make sure to include all the requirements discussed in the meeting.",
-    priority: "high",
-    status: "pending",
-    assignedTo: "John Doe",
-    createdBy: "Admin",
-    dueDate: new Date(2025, 4, 15),
-  },
-  {
-    id: "2",
-    title: "Review design mockups",
-    description: "Review the design mockups for the landing page and provide feedback to the design team.",
-    priority: "medium",
-    status: "in-progress",
-    assignedTo: "John Doe",
-    createdBy: "Sarah Johnson",
-    dueDate: new Date(2025, 4, 10),
-  },
-  {
-    id: "3",
-    title: "Update documentation",
-    description: "Update the API documentation with the new endpoints and parameters.",
-    priority: "low",
-    status: "completed",
-    assignedTo: "John Doe",
-    createdBy: "Michael Brown",
-    dueDate: new Date(2025, 4, 5),
-  },
-  {
-    id: "4",
-    title: "Fix navigation bug",
-    description:
-      "Fix the navigation bug in the mobile view where the dropdown menu doesn't close after clicking an item.",
-    priority: "high",
-    status: "pending",
-    assignedTo: "John Doe",
-    createdBy: "Emily Davis",
-    dueDate: new Date(2025, 4, 20),
-  },
-  {
-    id: "5",
-    title: "Prepare client presentation",
-    description: "Create slides for the upcoming client presentation highlighting project milestones and achievements.",
-    priority: "medium",
-    status: "pending",
-    assignedTo: "John Doe",
-    createdBy: "Alex Wilson",
-    dueDate: new Date(2025, 4, 25),
-  },
-]
 
 export default function DashboardPage() {
-  const [tasks, setTasks] = useState<Task[]>(mockTasks)
-  const [filteredTasks, setFilteredTasks] = useState<Task[]>(mockTasks)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [currentFilter, setCurrentFilter] = useState("all")
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentFilter, setCurrentFilter] = useState("all");
+
+  const { givenTask } = useTaskStore();
+
+  useEffect(() => {
+    setTasks(givenTask);
+  }, [givenTask]);
 
   const handleFilterChange = (priority: string) => {
-    setCurrentFilter(priority)
-    filterTasks(priority, searchQuery)
-  }
+    setCurrentFilter(priority);
+    filterTasks(priority, searchQuery);
+  };
 
   const handleSearch = (query: string) => {
-    setSearchQuery(query)
-    filterTasks(currentFilter, query)
-  }
+    setSearchQuery(query);
+    filterTasks(currentFilter, query);
+  };
 
   const filterTasks = (priority: string, query: string) => {
-    let filtered = [...tasks]
+    let filtered = tasks ? [...tasks] : [];
 
     // Filter by priority
     if (priority !== "all") {
-      filtered = filtered.filter((task) => task.priority === priority)
+      filtered = filtered.filter((task) => task.priority === priority);
     }
 
     // Filter by search query
@@ -94,30 +65,55 @@ export default function DashboardPage() {
       filtered = filtered.filter(
         (task) =>
           task.title.toLowerCase().includes(query.toLowerCase()) ||
-          task.description.toLowerCase().includes(query.toLowerCase()),
-      )
+          task.description.toLowerCase().includes(query.toLowerCase())
+      );
     }
 
-    setFilteredTasks(filtered)
-  }
+    // Sort tasks so completed tasks appear at the end
+    filtered.sort((a, b) => {
+      if (a.status === "completed" && b.status !== "completed") return 1;
+      if (a.status !== "completed" && b.status === "completed") return -1;
+      return 0;
+    });
+
+    setFilteredTasks(filtered);
+  };
 
   const handleStatusChange = (id: string, status: string) => {
     const updatedTasks = tasks.map((task) =>
-      task.id === id ? { ...task, status: status as "pending" | "in-progress" | "completed" } : task,
-    )
-    setTasks(updatedTasks)
-    filterTasks(currentFilter, searchQuery)
-  }
+      task._id === id
+        ? { ...task, status: status as "pending" | "in-progress" | "completed" }
+        : task
+    );
+    setTasks(updatedTasks);
+    filterTasks(currentFilter, searchQuery);
+  };
 
   const handleDeleteTask = (id: string) => {
-    const updatedTasks = tasks.filter((task) => task.id !== id)
-    setTasks(updatedTasks)
-    filterTasks(currentFilter, searchQuery)
-  }
+    const updatedTasks = tasks.filter((task) => task._id !== id);
+    setTasks(updatedTasks);
+    filterTasks(currentFilter, searchQuery);
+  };
 
   useEffect(() => {
-    filterTasks(currentFilter, searchQuery)
-  }, [tasks])
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      const fetchTasks = async () => {
+        const res = await fetchGivenTasks(token);
+        if (Array.isArray(res)) {
+          setTasks(res as Task[]);
+        } else {
+          console.log(res);
+        }
+      };
+      fetchTasks();
+    }
+  }, []);
+
+  useEffect(() => {
+    filterTasks(currentFilter, searchQuery);
+  }, [tasks]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -167,7 +163,12 @@ export default function DashboardPage() {
                 transition={{ staggerChildren: 0.1 }}
               >
                 {filteredTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} onStatusChange={handleStatusChange} onDelete={handleDeleteTask} />
+                  <TaskCard
+                    key={task._id}
+                    task={task}
+                    onStatusChange={handleStatusChange}
+                    onDelete={handleDeleteTask}
+                  />
                 ))}
               </motion.div>
             ) : (
@@ -181,10 +182,10 @@ export default function DashboardPage() {
                   {searchQuery
                     ? "No tasks match your search criteria. Try a different search term."
                     : currentFilter !== "all"
-                      ? `No ${currentFilter} priority tasks found. Try a different filter.`
-                      : "You don't have any tasks yet. Create your first task to get started."}
+                    ? `No ${currentFilter} priority tasks found. Try a different filter.`
+                    : "You don't have any tasks yet. Create your first task to get started."}
                 </p>
-                <Link href="/create-task">
+                <Link href="/createTask">
                   <Button>
                     <Plus className="mr-2 h-4 w-4" />
                     Create Task
@@ -196,5 +197,5 @@ export default function DashboardPage() {
         </div>
       </main>
     </div>
-  )
+  );
 }
