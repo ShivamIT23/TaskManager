@@ -1,12 +1,12 @@
 "use client";
 
 import type React from "react";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { CalendarIcon, Loader2 } from "lucide-react";
+import { createTask } from "@taskShivManager/lib/fetchTasks";
 import Navbar from "@taskShivManager/components/DashBoard/NavBar";
 import { Button } from "@taskShivManager/components/ui/button";
 import {
@@ -34,21 +34,68 @@ import {
   PopoverTrigger,
 } from "@taskShivManager/components/ui/popover";
 import { cn } from "@taskShivManager/lib/utils";
+import { useUserList } from "@taskShivManager/store/userList";
 
 export default function CreateTaskPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [date, setDate] = useState<Date>();
+  const { users, fetchUsers } = useUserList();
+  const [taskData, setTaskData] = useState<{
+    title: string;
+    description: string;
+    dueDate: Date | undefined;
+    priority: string;
+    status: string;
+    assignedToName: string;
+  }>({
+    title: "",
+    description: "",
+    dueDate: new Date(),
+    priority: "",
+    status: "",
+    assignedToName: "",
+  });
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) fetchUsers(token);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const { title, description, priority, status, assignedToName, dueDate } =
+      taskData;
+
+    if (
+      !title ||
+      !description ||
+      !priority ||
+      !status ||
+      !assignedToName ||
+      !dueDate
+    ) {
+      alert("Please fill out all fields.");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Authentication token not found.");
+      return;
+    }
+
     setIsLoading(true);
 
-    // Simulate task creation process
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      if(!taskData.dueDate) return;
+      await createTask(token, { ...taskData, dueDate: taskData.dueDate as Date });
       router.push("/dashboard");
-    }, 1500);
+    } catch (err) {
+      console.error("Error creating task:", err);
+      alert("Failed to create task. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -72,12 +119,30 @@ export default function CreateTaskPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="title">Task Title</Label>
-                    <Input id="title" placeholder="Enter task title" required />
+                    <Input
+                      value={taskData.title}
+                      onChange={(e) =>
+                        setTaskData((prev) => ({
+                          ...prev,
+                          title: e.target.value,
+                        }))
+                      }
+                      id="title"
+                      placeholder="Enter task title"
+                      required
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="description">Description</Label>
                     <Textarea
+                      value={taskData.description}
+                      onChange={(e) =>
+                        setTaskData((prev) => ({
+                          ...prev,
+                          description: e.target.value,
+                        }))
+                      }
                       id="description"
                       placeholder="Enter task description"
                       className="min-h-32 resize-none"
@@ -85,10 +150,15 @@ export default function CreateTaskPage() {
                     />
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-4">
+                  <div className="grid gap-4 sm:grid-cols-5">
                     <div className="space-y-2 col-span-1">
                       <Label htmlFor="priority">Priority</Label>
-                      <Select required>
+                      <Select
+                        value={taskData.priority}
+                        onValueChange={(value) =>
+                          setTaskData((prev) => ({ ...prev, priority: value }))
+                        }
+                      >
                         <SelectTrigger id="priority">
                           <SelectValue placeholder="Select priority" />
                         </SelectTrigger>
@@ -99,44 +169,80 @@ export default function CreateTaskPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
+
+                    <div className="space-y-2 col-span-1">
+                      <Label htmlFor="status">Status</Label>
+                      <Select
+                        value={taskData.status}
+                        onValueChange={(value) =>
+                          setTaskData((prev) => ({ ...prev, status: value }))
+                        }
+                      >
+                        <SelectTrigger id="status">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="in-progress">
+                            In-progress
+                          </SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2 col-span-1">
                       <Label htmlFor="assignee">Assign To</Label>
-                      <Select required>
+                      <Select
+                        value={taskData.assignedToName}
+                        onValueChange={(value) =>
+                          setTaskData((prev) => ({
+                            ...prev,
+                            assignedToName: value,
+                          }))
+                        }
+                      >
                         <SelectTrigger id="assignee">
                           <SelectValue placeholder="Select team member" />
                         </SelectTrigger>
                         <SelectContent className="bg-white">
-                          <SelectItem value="john-doe">John Doe</SelectItem>
-                          <SelectItem value="jane-smith">Jane Smith</SelectItem>
-                          <SelectItem value="robert-johnson">
-                            Robert Johnson
-                          </SelectItem>
-                          <SelectItem value="emily-davis">
-                            Emily Davis
-                          </SelectItem>
+                          {users.length > 0 &&
+                            users.map((user) => (
+                              <SelectItem key={user._id} value={user.username}>
+                                {user.username}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
+
                     <div className="space-y-2">
                       <Label>Due Date</Label>
-                      <Popover >
+                      <Popover>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             className={cn(
                               "w-full justify-start text-left font-normal",
-                              !date && "text-muted-foreground"
+                              !taskData.dueDate && "text-muted-foreground"
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {date ? format(date, "PPP") : "Select a date"}
+                            {taskData.dueDate
+                              ? format(taskData.dueDate, "PPP")
+                              : "Select a date"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0 bg-white">
                           <Calendar
                             mode="single"
-                            selected={date}
-                            onSelect={setDate}
+                            selected={taskData.dueDate}
+                            onSelect={(date) =>
+                              setTaskData((prev) => ({
+                                ...prev,
+                                dueDate: date,
+                              }))
+                            }
                             initialFocus
                             showOutsideDays={false}
                           />

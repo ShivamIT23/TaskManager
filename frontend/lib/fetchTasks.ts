@@ -17,8 +17,9 @@ export const fetchGivenTasks = async (token: string) => {
       const text = await res.text();
       if (text == `{"message":"No tasks assigned to you"}`) {
         return text;
+      } else {
+        throw new Error(`Failed to fetch given tasks: ${text}`);
       }
-      throw new Error(`Failed to fetch given tasks: ${text}`);
     }
 
     const data = await res.json();
@@ -29,6 +30,36 @@ export const fetchGivenTasks = async (token: string) => {
     console.error("Failed to fetch assigned tasks", err);
   }
 };
+
+export async function createTask(
+  token: string,
+  task: {
+    title: string;
+    description: string;
+    dueDate: Date;
+    priority: string;
+    status: string;
+    assignedToName: string;
+  }
+) {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_BACKEND_SERVER}/api/tasks`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(task),
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to create task");
+  }
+
+  return res.json();
+}
 
 export const fetchAssignedTasks = async (token: string) => {
   try {

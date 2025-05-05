@@ -35,7 +35,9 @@ export interface Task {
   description: string;
   priority: "high" | "medium" | "low";
   status: "pending" | "in-progress" | "completed";
+  assignedToName: string;
   assignedTo: string;
+  createdByName: string;
   createdBy: string;
   dueDate: string;
 }
@@ -117,10 +119,6 @@ export function TaskCard({
               <DropdownMenuContent align="end" className="min-w-full ">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="bg-white">
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => onDelete && onDelete(task._id)}
                   className="text-red-600 bg-white"
@@ -155,7 +153,7 @@ export function TaskCard({
               {showAssign && (
                 <div>
                   <span className="font-medium">Assigned to: </span>
-                  {task.assignedTo}
+                  {task.assignedToName}
                 </div>
               )}
               <div>
@@ -167,7 +165,7 @@ export function TaskCard({
         </CardContent>
         <CardFooter className="flex justify-between p-4 pt-0">
           <div className="text-xs text-muted-foreground">
-            Created by {task.createdBy}
+            Created by {task.createdByName}
           </div>
           <div className="flex gap-2">
             {task.status !== "completed" && (
@@ -186,7 +184,7 @@ export function TaskCard({
               </Button>
             )}
             {showEditButton && (
-              <Link href={`/edit-task/${task._id}`}>
+              <Link href={`/editTask/${task._id}`}>
                 <Button size="sm" variant="outline">
                   <Edit className="mr-2 h-4 w-4" />
                   Edit

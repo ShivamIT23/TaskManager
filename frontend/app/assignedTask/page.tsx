@@ -27,7 +27,9 @@ interface Task {
   dueDate: string;
   priority: "high" | "medium" | "low";
   status: "pending" | "in-progress" | "completed";
+  createdByName: string;
   createdBy: string;
+  assignedToName: string;
   assignedTo: string;
   pendingAction?: {
     action: "update" | "delete" | null;
