@@ -11,13 +11,7 @@ const taskRoutes = require("./routes/task");
 const setupSocket = require("./sockets"); // <-- import socket setup
 
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || origin === process.env.FRONTEND_URL) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
+  origin: process.env.FRONTEND_URL,
   credentials: true,
 };
 
