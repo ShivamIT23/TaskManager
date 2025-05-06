@@ -79,11 +79,11 @@ export default function SignupPage() {
     }));
   };
 
-  const handleRoleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleRoleChange = (value: string) => {
     setIsError(false);
     setFormData((prev) => ({
       ...prev,
-      role: e.target.value,
+      role: value,
     }));
   };
 
@@ -185,9 +185,7 @@ export default function SignupPage() {
                   <Label htmlFor="role">Role</Label>
                   <Select
                     value={formData.role}
-                    onValueChange={(value) =>
-                      setFormData((prev) => ({ ...prev, role: value }))
-                    }
+                    onValueChange={handleRoleChange}
                   >
                     <SelectTrigger id="role">
                       <SelectValue placeholder="Select Role" />
