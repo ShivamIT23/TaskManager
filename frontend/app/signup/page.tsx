@@ -18,6 +18,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@taskShivManager/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@taskShivManager/components/ui/select";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -29,6 +36,7 @@ export default function SignupPage() {
     email: "",
     password: "",
     confirmPassword: "",
+    role: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,6 +79,14 @@ export default function SignupPage() {
     }));
   };
 
+  const handleRoleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsError(false);
+    setFormData((prev) => ({
+      ...prev,
+      role: e.target.value,
+    }));
+  };
+
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsError(false);
     setFormData((prev) => ({
@@ -100,7 +116,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="container flex h-screen w-screen flex-col items-center justify-center">
+    <div className="container flex h-fit w-screen flex-col items-center min-h-screen my-[10vh] justify-center">
       <Link href="/" className="absolute left-4 top-4 md:left-8 md:top-8">
         <Button variant="ghost">
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -164,6 +180,24 @@ export default function SignupPage() {
                     type="password"
                     required
                   />
+                </div>
+                <div className="space-y-2 grid gap-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, role: value }))
+                    }
+                  >
+                    <SelectTrigger id="role">
+                      <SelectValue placeholder="Select Role" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="admin">admin</SelectItem>
+                      <SelectItem value="manager">manager</SelectItem>
+                      <SelectItem value="user">user</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 {!passMatch && (
                   <div className="w-full text-center text-red-600 font-semibold opacity-80 text-sm">
